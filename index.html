@@ -24,6 +24,7 @@
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             outline: none;
+            box-sizing: border-box;
         }
         #searchInput:focus {
             border-color: #0056b3;
@@ -87,13 +88,20 @@
             text-align: center;
             color: #999;
         }
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            color: #007BFF;
+        }
     </style>
 </head>
 <body>
 
 <h1>Product Search</h1>
 <input type="text" id="searchInput" placeholder="Search for products..." oninput="searchProducts()" />
-
+<div id="loading">Loading...</div>
 <div id="suggestions" class="no-results">Start typing to see suggestions...</div>
 
 <script>
@@ -103,6 +111,7 @@
     let products = [];
 
     async function loadXML() {
+        document.getElementById("loading").style.display = "block";  // Show loading indicator
         try {
             const response = await fetch(proxyUrl + encodeURIComponent(xmlUrl));
             if (!response.ok) throw new Error('Network response was not ok');
@@ -112,6 +121,8 @@
             parseProducts(xmlDoc);
         } catch (error) {
             console.error('Error fetching the XML file:', error);
+        } finally {
+            document.getElementById("loading").style.display = "none";  // Hide loading indicator
         }
     }
 
