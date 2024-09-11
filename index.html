@@ -51,19 +51,19 @@
 <div id="suggestions"></div>
 
 <script>
-    // Použijeme proxy server
-    const proxyUrl = 'https://thingproxy.freeboard.io/fetch/';
+    // Alternativní proxy server
+    const proxyUrl = 'https://api.allorigins.win/get?url=';
     const xmlUrl = 'https://www.henrymorgan.cz/export-full-products-TGp7rYDROL.xml';
 
     let products = [];
 
     async function loadXML() {
         try {
-            const response = await fetch(proxyUrl + xmlUrl);
+            const response = await fetch(proxyUrl + encodeURIComponent(xmlUrl));
             if (!response.ok) throw new Error('Network response was not ok');
-            const text = await response.text();
+            const data = await response.json();
             const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(text, "application/xml");
+            const xmlDoc = parser.parseFromString(data.contents, "application/xml");
             parseProducts(xmlDoc);
         } catch (error) {
             console.error('Error fetching the XML file:', error);
@@ -133,10 +133,10 @@
             suggestionsContainer.appendChild(suggestionItem);
         });
     }
-
+fdsffffffffffffffffffffffffffffffff
     // Načteme produkty při načtení stránky
     window.onload = loadXML;
 </script>
-fdsfdsf
+
 </body>
 </html>
