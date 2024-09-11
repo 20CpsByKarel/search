@@ -7,134 +7,136 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-        }
-        .search-container {
             margin: 20px;
         }
-        .search-input {
+        #searchInput {
+            width: 100%;
             padding: 10px;
-            width: 300px;
             font-size: 16px;
         }
-        .suggestions {
+        #suggestions {
             border: 1px solid #ccc;
+            margin-top: 10px;
             max-height: 200px;
             overflow-y: auto;
-            margin-top: 10px;
         }
         .suggestion-item {
             padding: 10px;
-            border-bottom: 1px solid #ccc;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .suggestion-item img {
+            max-width: 50px;
+            margin-right: 10px;
+        }
+        .suggestion-item button {
+            padding: 5px 10px;
+            background-color: green;
+            color: white;
+            border: none;
             cursor: pointer;
         }
-        .suggestion-item:hover {
-            background-color: #f0f0f0;
-        }
-        .product {
-            margin: 20px 0;
-        }
-        .product img {
-            width: 100px;
-            height: auto;
-        }
-        .product-title {
-            font-size: 18px;
-            margin: 5px 0;
-        }
-        .product-price {
-            color: green;
-            margin: 5px 0;
-        }
-        .buy-button {
-            padding: 10px 15px;
-            background-color: blue;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
+        .suggestion-item button:hover {
+            background-color: darkgreen;
         }
     </style>
 </head>
 <body>
 
-<div class="search-container">
-    <input type="text" id="searchInput" class="search-input" placeholder="Search for products...">
-    <div id="suggestions" class="suggestions"></div>
-</div>
+<h1>Product Search</h1>
+<input type="text" id="searchInput" placeholder="Search for products..." oninput="searchProducts()" />
+
+<div id="suggestions"></div>
 
 <script>
-// URL na proxy PHP soubor
-const proxyUrl = 'https://tvujserver.cz/proxy.php';
+    // Použijeme proxy server
+    const proxyUrl = 'https://thingproxy.freeboard.io/fetch/';
+    const xmlUrl = 'https://www.henrymorgan.cz/export-full-products-TGp7rYDROL.xml';
 
-// Funkce pro načtení XML dat
-async function loadXML() {
-    try {
-        const response = await fetch(proxyUrl);
-        if (response.ok) {
-            const xmlText = await response.text();
+    let products = [];
+
+    async function loadXML() {
+        try {
+            const response = await fetch(proxyUrl + xmlUrl);
+            if (!response.ok) throw new Error('Network response was not ok');
+            const text = await response.text();
             const parser = new DOMParser();
-            return parser.parseFromString(xmlText, "text/xml");
-        } else {
-            console.error("Error loading XML:", response.statusText);
-            return null;
-        }
-    } catch (error) {
-        console.error("Fetch error:", error);
-        return null;
-    }
-}
-
-// Funkce pro vyhledávání produktů
-async function searchProducts(query) {
-    const xml = await loadXML();
-    if (!xml) return;
-
-    const products = xml.getElementsByTagName("PRODUCT");
-    const suggestions = document.getElementById("suggestions");
-    suggestions.innerHTML = '';
-
-    query = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Odstraní diakritiku
-
-    for (let i = 0; i < products.length; i++) {
-        const title = products[i].getElementsByTagName("TITLE")[0].textContent;
-        const description = products[i].getElementsByTagName("DESCRIPTION")[0].textContent;
-        const shortDescription = products[i].getElementsByTagName("SHORT_DESCRIPTION")[0].textContent;
-        const price = products[i].getElementsByTagName("PRICE")[0].textContent;
-        const img = products[i].getElementsByTagName("IMAGEURL")[0].textContent;
-        const url = products[i].getElementsByTagName("URL")[0].textContent;
-
-        const normalizedTitle = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const normalizedDesc = description.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const normalizedShortDesc = shortDescription.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-        if (normalizedTitle.includes(query) || normalizedDesc.includes(query) || normalizedShortDesc.includes(query)) {
-            // Vytvoří HTML strukturu pro produkt
-            const productElement = document.createElement('div');
-            productElement.classList.add('suggestion-item');
-            productElement.innerHTML = `
-                <div class="product">
-                    <img src="${img}" alt="${title}">
-                    <div class="product-title">${title}</div>
-                    <div class="product-price">${price} Kč</div>
-                    <a href="${url}" class="buy-button">Koupit</a>
-                </div>
-            `;
-
-            // Přidá produkt do návrhů
-            suggestions.appendChild(productElement);
+            const xmlDoc = parser.parseFromString(text, "application/xml");
+            parseProducts(xmlDoc);
+        } catch (error) {
+            console.error('Error fetching the XML file:', error);
         }
     }
-}
 
-// Event listener na input
-document.getElementById('searchInput').addEventListener('input', function () {
-    const query = this.value;
-    if (query.length >= 3) {
-        searchProducts(query);
-    } else {
-        document.getElementById('suggestions').innerHTML = '';
+    function parseProducts(xmlDoc) {
+        const items = xmlDoc.getElementsByTagName("SHOPITEM");
+        for (let i = 0; i < items.length; i++) {
+            const product = {
+                title: items[i].getElementsByTagName("PRODUCTNAME")[0].textContent,
+                description: items[i].getElementsByTagName("DESCRIPTION")[0]?.textContent || '',
+                shortDescription: items[i].getElementsByTagName("SHORTDESCRIPTION")[0]?.textContent || '',
+                price: items[i].getElementsByTagName("PRICE_VAT")[0].textContent,
+                imageUrl: items[i].getElementsByTagName("IMGURL")[0]?.textContent || '',
+                url: items[i].getElementsByTagName("URL")[0].textContent
+            };
+            products.push(product);
+        }
     }
-});
+
+    function searchProducts() {
+        const searchTerm = document.getElementById("searchInput").value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const suggestionsContainer = document.getElementById("suggestions");
+        suggestionsContainer.innerHTML = '';
+
+        if (searchTerm.length < 3) {
+            return;
+        }
+
+        const filteredProducts = products.filter(product => {
+            const normalizedTitle = product.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normalizedDescription = product.description.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normalizedShortDescription = product.shortDescription.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            return normalizedTitle.includes(searchTerm) ||
+                   normalizedDescription.includes(searchTerm) ||
+                   normalizedShortDescription.includes(searchTerm);
+        });
+
+        filteredProducts.forEach(product => {
+            const suggestionItem = document.createElement("div");
+            suggestionItem.classList.add("suggestion-item");
+
+            const productInfo = document.createElement("div");
+            const productTitle = document.createElement("h4");
+            productTitle.textContent = product.title;
+
+            const productPrice = document.createElement("p");
+            productPrice.textContent = `Price: ${product.price} Kč`;
+
+            productInfo.appendChild(productTitle);
+            productInfo.appendChild(productPrice);
+
+            const productImage = document.createElement("img");
+            productImage.src = product.imageUrl;
+
+            const buyButton = document.createElement("button");
+            buyButton.textContent = "Buy";
+            buyButton.onclick = () => {
+                window.location.href = product.url;
+            };
+
+            suggestionItem.appendChild(productImage);
+            suggestionItem.appendChild(productInfo);
+            suggestionItem.appendChild(buyButton);
+            suggestionsContainer.appendChild(suggestionItem);
+        });
+    }
+
+    // Načteme produkty při načtení stránky
+    window.onload = loadXML;
 </script>
-
+fdsfdsf
 </body>
 </html>
