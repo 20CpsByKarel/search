@@ -66,6 +66,8 @@
     const xmlUrl = 'https://www.henrymorgan.cz/export-full-products-TGp7rYDROL.xml';
 
     let products = [];
+    let imageUrl = '';
+    let prices = [];
 
     async function loadXML() {
         try {
@@ -85,14 +87,33 @@
         for (let i = 0; i < items.length; i++) {
             const descriptions = items[i].getElementsByTagName("DESCRIPTIONS")[0];
             const descriptionNodes = descriptions.getElementsByTagName("DESCRIPTION");
+            const imageUrlNode = items[i].getElementsByTagName("IMAGE_URL")[0];
+            const pricesNode = items[i].getElementsByTagName("PRICES")[0];
+
+            let imageUrl = imageUrlNode ? imageUrlNode.textContent.trim() : '';
+            let prices = [];
+            if (pricesNode) {
+                const priceNodes = pricesNode.getElementsByTagName("PRICE");
+                for (let k = 0; k < priceNodes.length; k++) {
+                    const lang = priceNodes[k].getAttribute("language");
+                    const priceListNodes = priceNodes[k].getElementsByTagName("PRICELIST");
+                    let price = '';
+                    if (priceListNodes.length > 0) {
+                        const priceWithVat = priceListNodes[0].getElementsByTagName("PRICE_WITH_VAT")[0]?.textContent.trim() || '';
+                        price = priceWithVat;
+                    }
+                    prices.push({ language: lang, price });
+                }
+            }
+
             for (let j = 0; j < descriptionNodes.length; j++) {
                 const lang = descriptionNodes[j].getAttribute("language");
                 const title = descriptionNodes[j].getElementsByTagName("TITLE")[0].textContent;
                 const url = descriptionNodes[j].getElementsByTagName("URL")[0].textContent;
                 const shortDescription = descriptionNodes[j].getElementsByTagName("SHORT_DESCRIPTION")[0].textContent.trim();
                 const longDescription = descriptionNodes[j].getElementsByTagName("LONG_DESCRIPTION")[0].textContent.trim();
-                const imageUrl = descriptionNodes[j].getElementsByTagName("IMAGE_URL")[0]?.textContent || ''; // Přidáno IMAGE_URL
-                const price = descriptionNodes[j].getElementsByTagName("PRICE")[0]?.textContent || ''; // Přidáno PRICE
+
+                const priceForLanguage = prices.find(p => p.language === lang)?.price || '';
 
                 products.push({
                     language: lang,
@@ -101,7 +122,7 @@
                     shortDescription,
                     longDescription,
                     imageUrl,
-                    price
+                    price: priceForLanguage
                 });
             }
         }
@@ -173,6 +194,6 @@
 
     window.onload = loadXML;
 </script>
-fdsffffsd
+fsfds
 </body>
 </html>
