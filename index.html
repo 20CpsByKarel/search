@@ -17,19 +17,20 @@
         #suggestions {
             border: 1px solid #ccc;
             margin-top: 10px;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
         }
         .suggestion-item {
             padding: 10px;
             border-bottom: 1px solid #ddd;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 10px;
         }
         .suggestion-item img {
-            max-width: 50px;
-            margin-right: 10px;
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: cover;
         }
         .suggestion-item button {
             padding: 5px 10px;
@@ -41,6 +42,16 @@
         .suggestion-item button:hover {
             background-color: darkgreen;
         }
+        .product-info {
+            flex: 1;
+        }
+        .product-info h4 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .product-info p {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -51,7 +62,6 @@
 <div id="suggestions"></div>
 
 <script>
-    // Používáme corsproxy.io pro obcházení CORS
     const proxyUrl = 'https://corsproxy.io/?';
     const xmlUrl = 'https://www.henrymorgan.cz/export-full-products-TGp7rYDROL.xml';
 
@@ -61,7 +71,7 @@
         try {
             const response = await fetch(proxyUrl + encodeURIComponent(xmlUrl));
             if (!response.ok) throw new Error('Network response was not ok');
-            const data = await response.text();  // Získáme data jako text
+            const data = await response.text();
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(data, "application/xml");
             parseProducts(xmlDoc);
@@ -81,20 +91,24 @@
                 const url = descriptionNodes[j].getElementsByTagName("URL")[0].textContent;
                 const shortDescription = descriptionNodes[j].getElementsByTagName("SHORT_DESCRIPTION")[0].textContent.trim();
                 const longDescription = descriptionNodes[j].getElementsByTagName("LONG_DESCRIPTION")[0].textContent.trim();
+                const imageUrl = descriptionNodes[j].getElementsByTagName("IMAGE_URL")[0]?.textContent || ''; // Přidáno IMAGE_URL
+                const price = descriptionNodes[j].getElementsByTagName("PRICE")[0]?.textContent || ''; // Přidáno PRICE
 
                 products.push({
                     language: lang,
                     title,
                     url,
                     shortDescription,
-                    longDescription
+                    longDescription,
+                    imageUrl,
+                    price
                 });
             }
         }
     }
 
     function normalizeText(text) {
-        return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, '');
     }
 
     function searchProducts() {
@@ -106,7 +120,6 @@
             return;
         }
 
-        // Získáme aktuální jazyk z proměnné upgates.language nebo defaultně "en"
         const language = window.upgates && window.upgates.language ? window.upgates.language : 'en';
         const filteredProducts = products.filter(product => {
             if (product.language !== language) {
@@ -115,7 +128,7 @@
             const normalizedTitle = normalizeText(product.title);
             const normalizedShortDescription = normalizeText(product.shortDescription);
             const normalizedLongDescription = normalizeText(product.longDescription);
-            
+
             return normalizedTitle.includes(searchTerm) ||
                    normalizedShortDescription.includes(searchTerm) ||
                    normalizedLongDescription.includes(searchTerm);
@@ -125,15 +138,25 @@
             const suggestionItem = document.createElement("div");
             suggestionItem.classList.add("suggestion-item");
 
+            const img = document.createElement("img");
+            img.src = product.imageUrl;
+            img.alt = product.title;
+
             const productInfo = document.createElement("div");
+            productInfo.classList.add("product-info");
+
             const productTitle = document.createElement("h4");
             productTitle.textContent = product.title;
 
             const productShortDesc = document.createElement("p");
             productShortDesc.textContent = `Short Description: ${product.shortDescription}`;
 
+            const productPrice = document.createElement("p");
+            productPrice.textContent = `Price: ${product.price}`;
+
             productInfo.appendChild(productTitle);
             productInfo.appendChild(productShortDesc);
+            productInfo.appendChild(productPrice);
 
             const buyButton = document.createElement("button");
             buyButton.textContent = "Buy";
@@ -141,15 +164,15 @@
                 window.location.href = product.url;
             };
 
+            suggestionItem.appendChild(img);
             suggestionItem.appendChild(productInfo);
             suggestionItem.appendChild(buyButton);
             suggestionsContainer.appendChild(suggestionItem);
         });
     }
 
-    // Načteme produkty při načtení stránky
     window.onload = loadXML;
 </script>
-
+fdsffffsd
 </body>
 </html>
