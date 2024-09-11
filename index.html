@@ -8,160 +8,132 @@
         body {
             font-family: Arial, sans-serif;
         }
-
         .search-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px;
-            margin: 50px auto;
+            margin: 20px;
         }
-
-        input[type="text"] {
-            width: 100%;
+        .search-input {
             padding: 10px;
+            width: 300px;
             font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
         }
-
         .suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            width: 100%;
-            background-color: white;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            max-height: 300px;
+            max-height: 200px;
             overflow-y: auto;
-            z-index: 1000;
+            margin-top: 10px;
         }
-
         .suggestion-item {
-            display: flex;
-            align-items: center;
             padding: 10px;
+            border-bottom: 1px solid #ccc;
             cursor: pointer;
         }
-
-        .suggestion-item img {
-            width: 50px;
-            height: 50px;
-            object-fit: cover;
-            margin-right: 10px;
-        }
-
         .suggestion-item:hover {
             background-color: #f0f0f0;
         }
-
-        .suggestion-item .info {
-            display: flex;
-            flex-direction: column;
+        .product {
+            margin: 20px 0;
         }
-
-        .suggestion-item .title {
-            font-weight: bold;
+        .product img {
+            width: 100px;
+            height: auto;
         }
-
-        .suggestion-item .price {
+        .product-title {
+            font-size: 18px;
+            margin: 5px 0;
+        }
+        .product-price {
             color: green;
+            margin: 5px 0;
         }
-
         .buy-button {
-            margin-left: auto;
-            padding: 5px 10px;
-            background-color: #28a745;
+            padding: 10px 15px;
+            background-color: blue;
             color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .buy-button:hover {
-            background-color: #218838;
+            text-decoration: none;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
 
 <div class="search-container">
-    <input type="text" id="searchInput" placeholder="Search for products..." />
+    <input type="text" id="searchInput" class="search-input" placeholder="Search for products...">
     <div id="suggestions" class="suggestions"></div>
 </div>
 
 <script>
-    // Proměnná pro určení jazyka, pokud není nalezena, použije se výchozí EN
-    var language = typeof updates !== 'undefined' && updates.language ? updates.language : 'EN';
+// URL na proxy PHP soubor
+const proxyUrl = 'https://tvujserver.cz/proxy.php';
 
-    // Funkce pro načtení a zpracování XML
-    async function loadXML() {
-        const response = await fetch('https://www.henrymorgan.cz/export-full-products-TGp7rYDROL.xml');
-        const xmlText = await response.text();
-        const parser = new DOMParser();
-        return parser.parseFromString(xmlText, "text/xml");
-    }
-
-    // Funkce pro odstranění diakritiky a převod na lowercase
-    function normalizeText(text) {
-        return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    }
-
-    // Funkce pro kontrolu shody minimálně 80 % slova
-    function matchesQuery(text, query) {
-        const normalizedText = normalizeText(text);
-        const normalizedQuery = normalizeText(query);
-        const matchRatio = normalizedQuery.length / normalizedText.length;
-        return normalizedText.includes(normalizedQuery) && matchRatio >= 0.8;
-    }
-
-    // Funkce pro zobrazení návrhů na základě vyhledávacího dotazu
-    async function searchProducts(query) {
-        const xml = await loadXML();
-        const products = xml.getElementsByTagName('SHOPITEM');
-        const suggestionsDiv = document.getElementById('suggestions');
-        suggestionsDiv.innerHTML = '';
-
-        query = query.trim();
-        if (query.length < 2) {
-            return;
+// Funkce pro načtení XML dat
+async function loadXML() {
+    try {
+        const response = await fetch(proxyUrl);
+        if (response.ok) {
+            const xmlText = await response.text();
+            const parser = new DOMParser();
+            return parser.parseFromString(xmlText, "text/xml");
+        } else {
+            console.error("Error loading XML:", response.statusText);
+            return null;
         }
+    } catch (error) {
+        console.error("Fetch error:", error);
+        return null;
+    }
+}
 
-        // Procházení produktů a hledání shod
-        for (let i = 0; i < products.length; i++) {
-            const product = products[i];
-            const title = product.getElementsByTagName(`TITLE`)[0].textContent || '';
-            const description = product.getElementsByTagName(`DESCRIPTION_${language}`)[0]?.textContent || '';
-            const shortDescription = product.getElementsByTagName(`SHORT_DESCRIPTION_${language}`)[0]?.textContent || '';
-            const price = product.getElementsByTagName('PRICE_VAT')[0].textContent || '';
-            const url = product.getElementsByTagName('URL')[0].textContent || '';
-            const imageUrl = product.getElementsByTagName('IMGURL')[0]?.textContent || '';
+// Funkce pro vyhledávání produktů
+async function searchProducts(query) {
+    const xml = await loadXML();
+    if (!xml) return;
 
-            // Kontrola, zda se text shoduje s vyhledávacím dotazem
-            if (matchesQuery(title, query) || matchesQuery(description, query) || matchesQuery(shortDescription, query)) {
-                // Vytvoření návrhu
-                const suggestionItem = document.createElement('div');
-                suggestionItem.classList.add('suggestion-item');
+    const products = xml.getElementsByTagName("PRODUCT");
+    const suggestions = document.getElementById("suggestions");
+    suggestions.innerHTML = '';
 
-                suggestionItem.innerHTML = `
-                    <img src="${imageUrl}" alt="${title}" />
-                    <div class="info">
-                        <div class="title">${title}</div>
-                        <div class="price">${price} Kč</div>
-                    </div>
-                    <button class="buy-button" onclick="window.location.href='${url}'">Buy</button>
-                `;
+    query = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Odstraní diakritiku
 
-                suggestionsDiv.appendChild(suggestionItem);
-            }
+    for (let i = 0; i < products.length; i++) {
+        const title = products[i].getElementsByTagName("TITLE")[0].textContent;
+        const description = products[i].getElementsByTagName("DESCRIPTION")[0].textContent;
+        const shortDescription = products[i].getElementsByTagName("SHORT_DESCRIPTION")[0].textContent;
+        const price = products[i].getElementsByTagName("PRICE")[0].textContent;
+        const img = products[i].getElementsByTagName("IMAGEURL")[0].textContent;
+        const url = products[i].getElementsByTagName("URL")[0].textContent;
+
+        const normalizedTitle = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const normalizedDesc = description.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const normalizedShortDesc = shortDescription.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        if (normalizedTitle.includes(query) || normalizedDesc.includes(query) || normalizedShortDesc.includes(query)) {
+            // Vytvoří HTML strukturu pro produkt
+            const productElement = document.createElement('div');
+            productElement.classList.add('suggestion-item');
+            productElement.innerHTML = `
+                <div class="product">
+                    <img src="${img}" alt="${title}">
+                    <div class="product-title">${title}</div>
+                    <div class="product-price">${price} Kč</div>
+                    <a href="${url}" class="buy-button">Koupit</a>
+                </div>
+            `;
+
+            // Přidá produkt do návrhů
+            suggestions.appendChild(productElement);
         }
     }
+}
 
-    // Event listener pro vyhledávací pole
-    document.getElementById('searchInput').addEventListener('input', function () {
-        const query = this.value;
+// Event listener na input
+document.getElementById('searchInput').addEventListener('input', function () {
+    const query = this.value;
+    if (query.length >= 3) {
         searchProducts(query);
-    });
+    } else {
+        document.getElementById('suggestions').innerHTML = '';
+    }
+});
 </script>
 
 </body>
