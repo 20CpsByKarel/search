@@ -71,7 +71,7 @@
     }
 
     function parseProducts(xmlDoc) {
-        const items = xmlDoc.getElementsByTagName("SHOPITEM");
+        const items = xmlDoc.getElementsByTagName("PRODUCT");
         for (let i = 0; i < items.length; i++) {
             const product = {
                 title: items[i].getElementsByTagName("PRODUCTNAME")[0].textContent,
