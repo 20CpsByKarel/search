@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .search-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 50px auto;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .suggestion-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .suggestion-item img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .suggestion-item .info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .suggestion-item .title {
+            font-weight: bold;
+        }
+
+        .suggestion-item .price {
+            color: green;
+        }
+
+        .buy-button {
+            margin-left: auto;
+            padding: 5px 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .buy-button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+
+<div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search for products..." />
+    <div id="suggestions" class="suggestions"></div>
+</div>
+
+<script>
+    // Proměnná pro určení jazyka, pokud není nalezena, použije se výchozí EN
+    var language = typeof updates !== 'undefined' && updates.language ? updates.language : 'EN';
+
+    // Funkce pro načtení a zpracování XML
+    async function loadXML() {
+        const response = await fetch('https://www.henrymorgan.cz/export-full-products-TGp7rYDROL.xml');
+        const xmlText = await response.text();
+        const parser = new DOMParser();
+        return parser.parseFromString(xmlText, "text/xml");
+    }
+
+    // Funkce pro odstranění diakritiky a převod na lowercase
+    function normalizeText(text) {
+        return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    // Funkce pro kontrolu shody minimálně 80 % slova
+    function matchesQuery(text, query) {
+        const normalizedText = normalizeText(text);
+        const normalizedQuery = normalizeText(query);
+        const matchRatio = normalizedQuery.length / normalizedText.length;
+        return normalizedText.includes(normalizedQuery) && matchRatio >= 0.8;
+    }
+
+    // Funkce pro zobrazení návrhů na základě vyhledávacího dotazu
+    async function searchProducts(query) {
+        const xml = await loadXML();
+        const products = xml.getElementsByTagName('SHOPITEM');
+        const suggestionsDiv = document.getElementById('suggestions');
+        suggestionsDiv.innerHTML = '';
+
+        query = query.trim();
+        if (query.length < 2) {
+            return;
+        }
+
+        // Procházení produktů a hledání shod
+        for (let i = 0; i < products.length; i++) {
+            const product = products[i];
+            const title = product.getElementsByTagName(`TITLE`)[0].textContent || '';
+            const description = product.getElementsByTagName(`DESCRIPTION_${language}`)[0]?.textContent || '';
+            const shortDescription = product.getElementsByTagName(`SHORT_DESCRIPTION_${language}`)[0]?.textContent || '';
+            const price = product.getElementsByTagName('PRICE_VAT')[0].textContent || '';
+            const url = product.getElementsByTagName('URL')[0].textContent || '';
+            const imageUrl = product.getElementsByTagName('IMGURL')[0]?.textContent || '';
+
+            // Kontrola, zda se text shoduje s vyhledávacím dotazem
+            if (matchesQuery(title, query) || matchesQuery(description, query) || matchesQuery(shortDescription, query)) {
+                // Vytvoření návrhu
+                const suggestionItem = document.createElement('div');
+                suggestionItem.classList.add('suggestion-item');
+
+                suggestionItem.innerHTML = `
+                    <img src="${imageUrl}" alt="${title}" />
+                    <div class="info">
+                        <div class="title">${title}</div>
+                        <div class="price">${price} Kč</div>
+                    </div>
+                    <button class="buy-button" onclick="window.location.href='${url}'">Buy</button>
+                `;
+
+                suggestionsDiv.appendChild(suggestionItem);
+            }
+        }
+    }
+
+    // Event listener pro vyhledávací pole
+    document.getElementById('searchInput').addEventListener('input', function () {
+        const query = this.value;
+        searchProducts(query);
+    });
+</script>
+
+</body>
+</html>
