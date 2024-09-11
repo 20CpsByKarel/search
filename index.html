@@ -74,9 +74,9 @@
         const items = xmlDoc.getElementsByTagName("PRODUCT");
         for (let i = 0; i < items.length; i++) {
             const product = {
-                title: items[i].getElementsByTagName("PRODUCTNAME")[0].textContent,
-                description: items[i].getElementsByTagName("DESCRIPTION")[0]?.textContent || '',
-                shortDescription: items[i].getElementsByTagName("SHORTDESCRIPTION")[0]?.textContent || '',
+                title: items[i].getElementsByTagName("TITLE")[0].textContent,
+                description: items[i].getElementsByTagName("LONG_DESCRIPTION")[0]?.textContent || '',
+                shortDescription: items[i].getElementsByTagName("SHORT_DESCRIPTION")[0]?.textContent || '',
                 price: items[i].getElementsByTagName("PRICE_VAT")[0].textContent,
                 imageUrl: items[i].getElementsByTagName("IMGURL")[0]?.textContent || '',
                 url: items[i].getElementsByTagName("URL")[0].textContent
