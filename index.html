@@ -66,8 +66,6 @@
     const xmlUrl = 'https://www.henrymorgan.cz/export-full-products-TGp7rYDROL.xml';
 
     let products = [];
-    let imageUrl = '';
-    let prices = [];
 
     async function loadXML() {
         try {
@@ -87,10 +85,10 @@
         for (let i = 0; i < items.length; i++) {
             const descriptions = items[i].getElementsByTagName("DESCRIPTIONS")[0];
             const descriptionNodes = descriptions.getElementsByTagName("DESCRIPTION");
-            const imageUrlNode = items[i].getElementsByTagName("IMAGE_URL")[0];
+            const images = items[i].getElementsByTagName("IMAGES")[0]?.getElementsByTagName("IMAGE") || [];
             const pricesNode = items[i].getElementsByTagName("PRICES")[0];
 
-            let imageUrl = imageUrlNode ? imageUrlNode.textContent.trim() : '';
+            const imageUrl = images.length > 0 ? images[0].getElementsByTagName("URL")[0]?.textContent.trim() : '';
             let prices = [];
             if (pricesNode) {
                 const priceNodes = pricesNode.getElementsByTagName("PRICE");
@@ -98,9 +96,11 @@
                     const lang = priceNodes[k].getAttribute("language");
                     const priceListNodes = priceNodes[k].getElementsByTagName("PRICELIST");
                     let price = '';
+                    let currency = '';
                     if (priceListNodes.length > 0) {
                         const priceWithVat = priceListNodes[0].getElementsByTagName("PRICE_WITH_VAT")[0]?.textContent.trim() || '';
-                        price = priceWithVat;
+                        currency = priceNodes[k].getElementsByTagName("CURRENCY")[0]?.textContent.trim() || '';
+                        price = `${priceWithVat} ${currency}`;
                     }
                     prices.push({ language: lang, price });
                 }
@@ -194,6 +194,6 @@
 
     window.onload = loadXML;
 </script>
-fsfds
+11
 </body>
 </html>
