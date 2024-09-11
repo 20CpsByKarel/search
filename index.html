@@ -97,19 +97,6 @@
         return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
-    function getWordSimilarity(word1, word2) {
-        const word1Length = word1.length;
-        const word2Length = word2.length;
-        const minLength = Math.min(word1Length, word2Length);
-        let matchCount = 0;
-
-        for (let i = 0; i < minLength; i++) {
-            if (word1[i] === word2[i]) matchCount++;
-        }
-
-        return (matchCount / Math.max(word1Length, word2Length)) * 100;
-    }
-
     function searchProducts() {
         const searchTerm = normalizeText(document.getElementById("searchInput").value);
         const suggestionsContainer = document.getElementById("suggestions");
@@ -125,22 +112,13 @@
             if (product.language !== language) {
                 return false;
             }
-
-            const searchTermWords = searchTerm.split(/\s+/);
-            const titleWords = normalizeText(product.title).split(/\s+/);
-            const shortDescWords = normalizeText(product.shortDescription).split(/\s+/);
-            const longDescWords = normalizeText(product.longDescription).split(/\s+/);
-
-            const wordMatches = (words) => {
-                return words.some(word => {
-                    return searchTermWords.some(term => {
-                        const similarity = getWordSimilarity(term, word);
-                        return similarity >= 80 && term.length <= word.length;
-                    });
-                });
-            };
-
-            return wordMatches(titleWords) || wordMatches(shortDescWords) || wordMatches(longDescWords);
+            const normalizedTitle = normalizeText(product.title);
+            const normalizedShortDescription = normalizeText(product.shortDescription);
+            const normalizedLongDescription = normalizeText(product.longDescription);
+            
+            return normalizedTitle.includes(searchTerm) ||
+                   normalizedShortDescription.includes(searchTerm) ||
+                   normalizedLongDescription.includes(searchTerm);
         });
 
         filteredProducts.forEach(product => {
@@ -172,6 +150,6 @@
     // Načteme produkty při načtení stránky
     window.onload = loadXML;
 </script>
-23
+
 </body>
 </html>
